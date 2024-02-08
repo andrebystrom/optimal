@@ -57,9 +57,22 @@ static struct optimal_command_builder *find_command(char *firstarg)
 static int parse_opts(int argc, char **argv,
                       struct optimal_command_builder *command)
 {
-    for (int i = 0; i < argc; i++)
+    int offset = 0;
+    int want_arg = 0;
+    int want_arg_offset;
+
+    int i = 0;
+    int remaining = argc;
+    while (remaining > 0)
     {
-        
+        int arglen = strlen(argv[i]);
+        if (!want_arg && *argv[i] == '-')
+        {
+            
+        }
+        else
+        {
+        }
     }
 }
 
