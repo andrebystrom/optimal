@@ -9,9 +9,7 @@
 #define OPTIMAL_MAX_ARG 20
 #define OPTIMAL_MAX_COMMAND_NAME 20
 #define OPTIMAL_MAX_COMMANDS 20
-
-#define OPTIMAL_MANDATORY 1
-#define OPTIMAL_HAS_VAL 2
+#define OPTIMAL_MAX_STATIC_DATA (OPTIMAL_MAX_OPTS * 40)
 
 struct optimal_bucket
 {
@@ -26,9 +24,9 @@ struct optimal_param_table
 
 enum optimal_value
 {
-    OPTIMAL_OPTIONAL,
-    OPTIMAL_NONE,
-    OPTIMAL_REQUIRED
+    OPTIMAL_VAL_OPTIONAL,
+    OPTIMAL_VAL_NONE,
+    OPTIMAL_VAL_REQUIRED
 };
 
 enum optimal_type
@@ -51,18 +49,22 @@ struct optimal_command_builder
     int num_args;
     struct optimal_arg args[OPTIMAL_MAX_ARG];
     char command_name[OPTIMAL_MAX_COMMAND_NAME + 1];
-    int (*handler)(struct optimal_param_table *);
+    int (*handler)(struct optimal_param_table *, int, char **);
 
-    struct optimal_command_builder (*add_arg)(char, char *, enum optimal_value,
-                                              enum optimal_type);
+    struct optimal_command_builder *(*add_arg)(char, char *, enum optimal_value,
+                                               enum optimal_type);
+    struct optimal_command_builder *(*add_handler)(
+        int (*handler)(struct optimal_param_table *, int, char **));
 };
 
 struct optimal_builder
 {
     int num_commands;
     struct optimal_command_builder commands[OPTIMAL_MAX_COMMANDS];
-    struct optimal_command_builder (*add_command)(char *command);
-    int (*build)(void);
+    struct optimal_param_table param_table;
+
+    struct optimal_command_builder *(*add_command)(char *command);
+    int (*build)(int, char **);
 };
 
 struct optimal_builder *optimal_builder(void);
