@@ -13,7 +13,8 @@
 
 struct optimal_bucket
 {
-    char *key;
+    char *long_name;
+    char *short_name;
     void *val;
 };
 
@@ -22,25 +23,25 @@ struct optimal_param_table
     struct optimal_bucket buckets[OPTIMAL_MAX_OPTS * OPTIMAL_MAX_ARG];
 };
 
-enum optimal_value
+enum optimal_qualifier
 {
-    OPTIMAL_VAL_OPTIONAL,
-    OPTIMAL_VAL_NONE,
-    OPTIMAL_VAL_REQUIRED
+    OPTIMAL_OPTIONAL,
+    OPTIMAL_REQUIRED
 };
 
 enum optimal_type
 {
     OPTIMAL_INT,
     OPTIMAL_FLOAT,
-    OPTIMAL_STRING
+    OPTIMAL_STRING,
+    OPTIMAL_FLAG
 };
 
 struct optimal_arg
 {
     char short_name[2];
     char long_name[OPTIMAL_MAX_LONG_NAME + 1];
-    enum optimal_value take_value;
+    enum optimal_qualifier qualifier;
     enum optimal_type type;
 };
 
@@ -51,8 +52,11 @@ struct optimal_command_builder
     char command_name[OPTIMAL_MAX_COMMAND_NAME + 1];
     int (*handler)(struct optimal_param_table *, int, char **);
 
-    struct optimal_command_builder *(*add_arg)(char, char *, enum optimal_value,
+    struct optimal_command_builder *(*add_arg)(char, char *,
+                                               enum optimal_qualifier,
                                                enum optimal_type);
+    struct optimal_command_builder *(*add_flag)(char, char *,
+                                                enum optimal_qualifier);
     struct optimal_command_builder *(*add_handler)(
         int (*handler)(struct optimal_param_table *, int, char **));
 };

@@ -8,9 +8,12 @@
 // forward declarations.
 static int build(int argc, char **argv);
 static struct optimal_command_builder *add_command(char *name);
-static struct optimal_command_builder *add_arg(char short_name, char *long_name,
-                                               enum optimal_value take_value,
-                                               enum optimal_type value_type);
+static struct optimal_command_builder *add_flag(
+    char short_name, char *long_name, enum optimal_qualifier qualifer);
+static struct optimal_command_builder *add_arg(
+    char short_name, char *long_name,
+    enum optimal_qualifier take_value,
+    enum optimal_type value_type);
 
 static struct optimal_command_builder *add_handler(
     int (*handler)(struct optimal_param_table *, int, char **));
@@ -54,24 +57,72 @@ static struct optimal_command_builder *find_command(char *firstarg)
     return NULL;
 }
 
+static struct optimal_arg *find_arg_from_long_name(
+    struct optimal_command_builder *command, char *long_name)
+{
+    for (int i = 0; i < command->num_args; i++)
+    {
+        if (strcmp(command->args[i].long_name, long_name) == 0)
+            return command->args + i;
+    }
+    return NULL;
+}
+
+static struct optimal_arg *find_arg_from_short_name(
+    struct optimal_command_builder *command, char short_name)
+{
+    for (int i = 0; i < command->num_args; i++)
+    {
+        if (command->args[i].short_name[0] == short_name)
+            return command->args + i;
+    }
+    return NULL;
+}
+
+// fills in the params_table with the supplied arguments.
+// returns < 0 on error, otherwise the number of unconsumed args.
 static int parse_opts(int argc, char **argv,
                       struct optimal_command_builder *command)
 {
     int offset = 0;
-    int want_arg = 0;
-    int want_arg_offset;
+    int num_moved = 0;
 
-    int i = 0;
-    int remaining = argc;
-    while (remaining > 0)
+    struct optimal_arg *arg = NULL;
+
+    for (int i = 0; i < argc - num_moved; i++)
     {
-        int arglen = strlen(argv[i]);
-        if (!want_arg && *argv[i] == '-')
+        int len = strlen(argv[i]);
+        char *curr = argv[i];
+        if (!arg && *curr == '-')
         {
-            
+            int is_long = curr + 1 == '-';
+            if (is_long)
+            {
+                if ((arg = find_arg_from_long_name(command, curr + 2)) == NULL)
+                    return -1;
+                continue;
+            }
+            char c;
+            while (c = *curr++)
+            {
+                struct optimal_arg *tmp;
+                tmp = find_arg_from_short_name(command, c);
+                if (tmp->qualifier == OPTIMAL_FLAG)
+                {
+
+                }
+                else
+                {
+                }
+            }
+        }
+        else if (!arg)
+        {
+            // will not be consumed, shift to back.
         }
         else
         {
+            // consume the argument for option in arg.
         }
     }
 }
@@ -85,10 +136,11 @@ static int build(int argc, char **argv)
 
     command = find_command(argc > 1 ? argv[1] : "");
     if (!command)
-        return -1; // print help?
+        return -1; // TODO: print help?
 
     // we know the command, lets parse the options.
-    parse_opts(argc - 2, argv + 2);
+    memset(&p_builder->param_table, 0, sizeof(p_builder->param_table));
+    parse_opts(argc - 2, argv + 2, command);
 
     // arguments parsed, run the handler!
     if (!command->handler)
@@ -125,14 +177,22 @@ static struct optimal_command_builder *add_command(char *name)
     current->handler = NULL;
 
     current->add_arg = add_arg;
+    current->add_flag = add_flag;
     current->add_handler = add_handler;
 
     return current;
 }
 
-static struct optimal_command_builder *add_arg(char short_name, char *long_name,
-                                               enum optimal_value take_value,
-                                               enum optimal_type value_type)
+static struct optimal_command_builder *add_flag(
+    char short_name, char *long_name, enum optimal_qualifier qualifer)
+{
+    return add_arg(short_name, long_name, qualifer, OPTIMAL_FLAG);
+}
+
+static struct optimal_command_builder *add_arg(
+    char short_name, char *long_name,
+    enum optimal_qualifier qualifier,
+    enum optimal_type value_type)
 {
     struct optimal_command_builder *current;
     struct optimal_arg *current_arg;
@@ -153,7 +213,7 @@ static struct optimal_command_builder *add_arg(char short_name, char *long_name,
         current_arg->long_name[OPTIMAL_MAX_ARG] = '\0';
     }
 
-    current_arg->take_value = take_value;
+    current_arg->qualifier = qualifier;
     current_arg->type = value_type;
 
     return current;

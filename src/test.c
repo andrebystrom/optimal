@@ -18,13 +18,13 @@ int main(int argc, char **argv)
     struct optimal_builder *app = optimal_builder();
 
     app->add_command("add")
-        ->add_arg('n', "name", OPTIMAL_VAL_REQUIRED, OPTIMAL_STRING)
-        ->add_arg('w', "why", OPTIMAL_VAL_NONE, 0)
+        ->add_arg('n', "name", OPTIMAL_REQUIRED, OPTIMAL_STRING)
+        ->add_flag('w', "why", OPTIMAL_OPTIONAL)
         ->add_handler(handle_add);
 
     app->add_command("del")
-        ->add_arg('n', "name", OPTIMAL_VAL_REQUIRED, OPTIMAL_STRING)
-        ->add_arg('w', "why", OPTIMAL_VAL_NONE, 0)
+        ->add_arg('n', "name", OPTIMAL_REQUIRED, OPTIMAL_STRING)
+        ->add_arg('w', "why", OPTIMAL_OPTIONAL, OPTIMAL_FLAG)
         ->add_handler(handle_del);
     return app->build(argc, argv);
 }
