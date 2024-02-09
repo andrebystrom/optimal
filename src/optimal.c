@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
 
 #include "optimal.h"
 
@@ -68,6 +70,11 @@ static struct optimal_arg *find_arg_from_long_name(
     return NULL;
 }
 
+static int param_insert(char *short_name, char *long_name, void *val)
+{
+    return 0;
+}
+
 static struct optimal_arg *find_arg_from_short_name(
     struct optimal_command_builder *command, char short_name)
 {
@@ -77,6 +84,81 @@ static struct optimal_arg *find_arg_from_short_name(
             return command->args + i;
     }
     return NULL;
+}
+
+static int insert_flag(struct optimal_arg *arg)
+{
+    bool *val;
+    if (!(allocate((void **)&val, sizeof(bool))))
+        return -1;
+    if (param_insert(arg->short_name, arg->long_name, val) < 0)
+        return -1;
+    return 0;
+}
+
+static int insert_int(struct optimal_arg *arg, int val)
+{
+    int *ins;
+    if (!allocate((void **)&ins, sizeof(int)))
+        return -1;
+    *ins = val;
+    if (param_insert(arg->short_name, arg->long_name, ins) < 0)
+        return -1;
+    return 0;
+}
+
+static int insert_float(struct optimal_arg *arg, float val)
+{
+    float *ins;
+    if (!allocate((void **)&ins, sizeof(float)))
+        return -1;
+    *ins = val;
+    if (param_insert(arg->short_name, arg->long_name, ins) < 0)
+        return -1;
+    return 0;
+}
+
+static int insert_arg(struct optimal_arg *arg, char *str)
+{
+    int len = strlen(str);
+    char *endptr;
+    int int_val;
+    float float_val;
+    char *str_val;
+    switch (arg->type)
+    {
+    case OPTIMAL_INT:
+        int_val = strtol(str, &endptr, 10);
+        errno = 0;
+        if (errno != 0 || endptr - str != len + 1)
+            return -1;
+        return insert_int(arg, int_val);
+    case OPTIMAL_FLOAT:
+        errno = 0;
+        float_val = strtof(str, &endptr);
+        if (errno != 0 || endptr - str != len + 1)
+            return -1;
+        return insert_float(arg, float_val);
+    case OPTIMAL_STRING:
+        if (!allocate((void **)&str_val, len + 1))
+            return -1;
+        strncpy(str_val, str, len);
+        str_val[len] = '\0';
+        return param_insert(arg->short_name, arg->long_name, str_val);
+    }
+
+    return 0;
+}
+
+static void shift_to_back(int argc, char **argv, int pos)
+{
+    char *tmp;
+    for (int i = pos; i < argc - 1; i++)
+    {
+        tmp = argv[i];
+        argv[i] = argv[i + 1];
+        argv[i + 1] = tmp;
+    }
 }
 
 // fills in the params_table with the supplied arguments.
@@ -98,31 +180,56 @@ static int parse_opts(int argc, char **argv,
             int is_long = curr + 1 == '-';
             if (is_long)
             {
-                if ((arg = find_arg_from_long_name(command, curr + 2)) == NULL)
+                struct optimal_arg *tmp;
+                if (!(tmp = find_arg_from_long_name(command, curr + 2)))
                     return -1;
+                if (tmp->qualifier == OPTIMAL_FLAG)
+                {
+                    if (insert_flag(tmp) < 0)
+                        return -1;
+                }
+                else
+                {
+                    arg = tmp;
+                }
                 continue;
             }
             char c;
             while (c = *curr++)
             {
                 struct optimal_arg *tmp;
-                tmp = find_arg_from_short_name(command, c);
+                if (!(tmp = find_arg_from_short_name(command, c)))
+                    return -1;
                 if (tmp->qualifier == OPTIMAL_FLAG)
                 {
-
+                    if (insert_flag(tmp) < 0)
+                        return -1;
+                }
+                else if (*curr)
+                {
+                    int arg_start = curr - argv[i] - 1;
+                    if (insert_arg(arg, argv[i] + arg_start) < 0)
+                        return -1;
                 }
                 else
                 {
+                    arg = tmp;
                 }
             }
         }
         else if (!arg)
         {
-            // will not be consumed, shift to back.
+            shift_to_back(argc, argv, i);
+            num_moved++;
+            // --HACK-- decrement i, so we use the same index in the next
+            // iteration
+            i--;
         }
         else
         {
-            // consume the argument for option in arg.
+            if (insert_arg(arg, argv[i]) < 0)
+                return -1;
+            arg = NULL;
         }
     }
 }

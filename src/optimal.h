@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define OPTIMAL_MAX_OPTS 20
 #define OPTIMAL_MAX_LONG_NAME 20
