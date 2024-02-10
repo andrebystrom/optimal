@@ -28,14 +28,27 @@ static struct optimal_builder *const p_builder = &int_optimal_builder;
 static uint64_t data_idx = 0;
 static uint8_t data[OPTIMAL_MAX_STATIC_DATA];
 
+// djb2
+static uint64_t hash(char *short_name, char *long_name)
+{
+    uint64_t hash = 5381;
+    char c;
+    if (short_name)
+        while ((c = *short_name++))
+            hash = ((hash << 5) + hash) + c;
+    if (long_name)
+        while ((c = *long_name++))
+            hash = ((hash << 5) + hash) + c;
+    return hash;
+}
+
 // Try to allocate size bytes (aligned on 16 byte boundaries) and point dest to
 // it. Returns 0 on success, -1 on failure.
 static int allocate(void **dest, size_t size)
 {
     const int boundary_mask = 0x0f;
-    uint64_t diff = ((uintptr_t)(data + data_idx)) & boundary_mask;
-    data_idx += diff;
-    data_idx = ((uintptr_t)data + data_idx + 15) & (uintptr_t)~boundary_mask;
+    data_idx = (((uintptr_t)data + data_idx + 15) & (uintptr_t)~boundary_mask) -
+               (uintptr_t)data;
     if (data_idx + size > sizeof(data))
         return -1;
     *dest = data + data_idx;
@@ -72,6 +85,20 @@ static struct optimal_arg *find_arg_from_long_name(
 
 static int param_insert(char *short_name, char *long_name, void *val)
 {
+    uint64_t h = hash(short_name, long_name) % OPTIMAL_PARAM_TABLE_SIZE;
+    struct optimal_param_table *table = &p_builder->param_table;
+    struct optimal_bucket *base = table->buckets;
+    struct optimal_bucket *curr_bucket = table->buckets + h;
+    while (curr_bucket->long_name != NULL ||
+           curr_bucket->short_name != NULL)
+    {
+        h = (h + 1) % OPTIMAL_PARAM_TABLE_SIZE;
+        curr_bucket = base + h;
+    }
+    curr_bucket->short_name = short_name;
+    curr_bucket->long_name = long_name;
+    curr_bucket->val = val;
+
     return 0;
 }
 
@@ -89,8 +116,9 @@ static struct optimal_arg *find_arg_from_short_name(
 static int insert_flag(struct optimal_arg *arg)
 {
     bool *val;
-    if (!(allocate((void **)&val, sizeof(bool))))
+    if (allocate((void **)&val, sizeof(bool)) < 0)
         return -1;
+    *val = true;
     if (param_insert(arg->short_name, arg->long_name, val) < 0)
         return -1;
     return 0;
@@ -99,7 +127,7 @@ static int insert_flag(struct optimal_arg *arg)
 static int insert_int(struct optimal_arg *arg, int val)
 {
     int *ins;
-    if (!allocate((void **)&ins, sizeof(int)))
+    if (allocate((void **)&ins, sizeof(int)) < 0)
         return -1;
     *ins = val;
     if (param_insert(arg->short_name, arg->long_name, ins) < 0)
@@ -110,7 +138,7 @@ static int insert_int(struct optimal_arg *arg, int val)
 static int insert_float(struct optimal_arg *arg, float val)
 {
     float *ins;
-    if (!allocate((void **)&ins, sizeof(float)))
+    if (allocate((void **)&ins, sizeof(float)) < 0)
         return -1;
     *ins = val;
     if (param_insert(arg->short_name, arg->long_name, ins) < 0)
@@ -140,14 +168,14 @@ static int insert_arg(struct optimal_arg *arg, char *str)
             return -1;
         return insert_float(arg, float_val);
     case OPTIMAL_STRING:
-        if (!allocate((void **)&str_val, len + 1))
+        if (allocate((void **)&str_val, len + 1) < 0)
             return -1;
         strncpy(str_val, str, len);
         str_val[len] = '\0';
         return param_insert(arg->short_name, arg->long_name, str_val);
     }
 
-    return 0;
+    return -1;
 }
 
 static void shift_to_back(int argc, char **argv, int pos)
@@ -183,7 +211,7 @@ static int parse_opts(int argc, char **argv,
                 struct optimal_arg *tmp;
                 if (!(tmp = find_arg_from_long_name(command, curr + 2)))
                     return -1;
-                if (tmp->qualifier == OPTIMAL_FLAG)
+                if (tmp->type == OPTIMAL_FLAG)
                 {
                     if (insert_flag(tmp) < 0)
                         return -1;
@@ -195,12 +223,13 @@ static int parse_opts(int argc, char **argv,
                 continue;
             }
             char c;
+            curr++;
             while (c = *curr++)
             {
                 struct optimal_arg *tmp;
                 if (!(tmp = find_arg_from_short_name(command, c)))
                     return -1;
-                if (tmp->qualifier == OPTIMAL_FLAG)
+                if (tmp->type == OPTIMAL_FLAG)
                 {
                     if (insert_flag(tmp) < 0)
                         return -1;
@@ -335,4 +364,22 @@ static struct optimal_command_builder *add_handler(
     current->handler = handler;
 
     return current;
+}
+
+void *param_get(struct optimal_param_table *table,
+                char short_name, char *long_name)
+{
+    char short_buf[] = {short_name, '\0'};
+    uint64_t h = hash(short_buf, long_name) % OPTIMAL_PARAM_TABLE_SIZE;
+    struct optimal_bucket *base = table->buckets;
+    struct optimal_bucket *curr_bucket = base + h;
+    // TODO handle null cases.
+    while (curr_bucket->short_name[0] != short_name ||
+           strcmp(curr_bucket->long_name, long_name) != 0)
+    {
+        h = (h + 1) % OPTIMAL_PARAM_TABLE_SIZE;
+        curr_bucket = base + h;
+    }
+
+    return curr_bucket->val;
 }

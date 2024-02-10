@@ -5,6 +5,8 @@
 
 int handle_add(struct optimal_param_table *params, int restc, char **restargc)
 {
+    char *s = (char *)param_get(params, 'n', "name");
+    printf("from add: %s\n", s);
     return 0;
 }
 

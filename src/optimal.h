@@ -11,6 +11,7 @@
 #define OPTIMAL_MAX_COMMAND_NAME 20
 #define OPTIMAL_MAX_COMMANDS 20
 #define OPTIMAL_MAX_STATIC_DATA (OPTIMAL_MAX_OPTS * 40)
+#define OPTIMAL_PARAM_TABLE_SIZE (OPTIMAL_MAX_OPTS * OPTIMAL_MAX_ARG)
 
 struct optimal_bucket
 {
@@ -21,7 +22,7 @@ struct optimal_bucket
 
 struct optimal_param_table
 {
-    struct optimal_bucket buckets[OPTIMAL_MAX_OPTS * OPTIMAL_MAX_ARG];
+    struct optimal_bucket buckets[OPTIMAL_PARAM_TABLE_SIZE];
 };
 
 enum optimal_qualifier
@@ -73,6 +74,9 @@ struct optimal_builder
 };
 
 struct optimal_builder *optimal_builder(void);
+
+void *param_get(struct optimal_param_table *table,
+                char short_name, char *long_name);
 
 /* b->add_command("hej")
     ->add_arg('n', "name", OPTIMAL_MANDATORY, OPTIMAL_VAL_STR)
