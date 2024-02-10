@@ -1,13 +1,13 @@
 CC=gcc
-CFLAGS=-c -g -std=c99 -Wall -Wextra -fsanitize=address,undefined,leak
-LDFLAGS=-fsanitize=address,undefined,leak
+CFLAGS=-c -g -std=c99 -Wall -Wextra
+LDFLAGS=
 
 SRCDIR=$(PWD)/src
 BUILDDIR=$(PWD)/build
 
-ifdef RELEASE
-	CFLAGS-=-fsanitize=address,undefined,leak
-	LDFLAGS-=-fsanitize=address,undefined,leak
+ifndef RELEASE
+	CFLAGS+=-fsanitize=address,undefined,leak
+	LDFLAGS+=-fsanitize=address,undefined,leak
 endif
 
 $(BUILDDIR)/test: $(BUILDDIR)/test.o $(BUILDDIR)/optimal.o
