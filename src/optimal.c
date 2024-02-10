@@ -241,9 +241,10 @@ static int parse_opts(int argc, char **argv,
                 }
                 else if (*curr)
                 {
-                    int arg_start = curr - argv[i] - 1;
-                    if (insert_arg(arg, argv[i] + arg_start) < 0)
+                    int arg_start = curr - argv[i];
+                    if (insert_arg(tmp, argv[i] + arg_start) < 0)
                         return -1;
+                    break;
                 }
                 else
                 {
@@ -335,7 +336,7 @@ static int build(int argc, char **argv)
 
     if (restc < 0)
         return print_help();
-    restv = argv + restc + (command->command_name[0] == '\0' ? 1 : 2);
+    restv = argv + (argc - restc);
 
     // validate options.
     if (validate_options(command) < 0)
