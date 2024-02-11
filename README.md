@@ -46,11 +46,14 @@ int main(int argc, char **argv) {
 > ./demo -njoe
 Hello joe
 flag was false
-> ./demo --name -f joe aaa bbb
+> ./demo --name joe -f aaa bbb
 Hello joe
 flag was true
 rest 1: aaa
 rest 2: bbb
+> ./demo some_command -fnjoe
+Hello joe
+flag was true
 > ./demo --help
 demo: print names
 usage: demo [<command>] <args>
