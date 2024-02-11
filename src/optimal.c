@@ -175,7 +175,7 @@ static int insert_arg(struct optimal_arg *arg, char *str)
     case OPTIMAL_STRING:
         if (allocate((void **)&str_val, len) < 0)
             return -1;
-        strncpy(str_val, str, len);
+        strcpy(str_val, str);
         str_val[len] = '\0';
         return param_insert(arg->short_name, arg->long_name, str_val);
     default:
