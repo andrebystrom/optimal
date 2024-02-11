@@ -363,6 +363,9 @@ struct optimal_builder *optimal_builder(char *app_name, char *description)
 static struct optimal_command_builder *add_command(char *name)
 {
     struct optimal_command_builder *current;
+    if(p_builder->num_commands >= OPTIMAL_MAX_COMMANDS)
+        return NULL; // TODO: set internal flag instead.
+
     current = p_builder->commands + p_builder->num_commands++;
 
     if (!name)
@@ -412,6 +415,8 @@ static struct optimal_command_builder *add_arg(
     struct optimal_arg *current_arg;
 
     current = p_builder->commands + p_builder->num_commands - 1;
+    if(current->num_args >= OPTIMAL_MAX_ARG)
+        return NULL; // TODO: set internal flag instead.
     current_arg = current->args + current->num_args++;
 
     current_arg->short_name[0] = short_name;
