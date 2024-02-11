@@ -370,7 +370,6 @@ static struct optimal_command_builder *add_command(char *name)
 
     if (!name)
         name = "";
-
     strncpy(current->command_name, name, OPTIMAL_MAX_COMMAND_NAME);
     current->command_name[OPTIMAL_MAX_COMMAND_NAME] = '\0';
     current->description[0] = '\0';

@@ -5,10 +5,14 @@ options/commands in the C programming language.
 # Example
 
 ```C
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "optimal.h"
 int handler(struct optimal_param_table *params, int restc, char **restv){
-    printf("Hello %s\n", (char *)params_get(params, 'n', "name"));
+    printf("Hello %s\n", (char *)param_get(params, 'n', "name"));
     printf("flag was %s\n",
-        *(bool *)params_get('f', "flag") ? "true" : "false");
+        *(bool *)param_get(params, 'f', "flag") ? "true" : "false");
     for (int i = 0; i < restc; i++) {
         printf("rest %d: %s\n", i + 1, restv[i]);
     }
@@ -51,9 +55,11 @@ rest 2: bbb
 demo: print names
 usage: demo [<command>] <args>
   -n | --name:  the name
+  -f | --flag:  the flag
 commands:
 some_command: some_command description
-  -n | --name: the name
+  -n | --name:  the name
+  -f | --flag:  the flag
 ```
 
 # API
