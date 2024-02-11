@@ -11,6 +11,7 @@
 #define OPTIMAL_MAX_COMMAND_NAME 20
 #define OPTIMAL_MAX_COMMANDS 20
 #define OPTIMAL_MAX_DESCRIPTION 50
+#define OPTIMAL_MAX_APP_NAME 20
 #define OPTIMAL_MAX_STATIC_DATA (OPTIMAL_MAX_OPTS * 40)
 #define OPTIMAL_PARAM_TABLE_SIZE (OPTIMAL_MAX_OPTS * OPTIMAL_MAX_ARG)
 
@@ -73,14 +74,17 @@ struct optimal_builder
     struct optimal_command_builder commands[OPTIMAL_MAX_COMMANDS];
     struct optimal_param_table param_table;
     char description[OPTIMAL_MAX_DESCRIPTION + 1];
+    char app_name[OPTIMAL_MAX_APP_NAME + 1];
 
     struct optimal_command_builder *(*add_command)(char *command);
     int (*build)(int, char **);
 };
 
-struct optimal_builder *optimal_builder(char *description);
+struct optimal_builder *optimal_builder(char *app_name, char *description);
 
 void *param_get(struct optimal_param_table *table,
                 char short_name, char *long_name);
+
+int print_help(void);
 
 #endif

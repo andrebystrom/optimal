@@ -163,17 +163,17 @@ static int insert_arg(struct optimal_arg *arg, char *str)
     case OPTIMAL_INT:
         int_val = strtol(str, &endptr, 10);
         errno = 0;
-        if (errno != 0 || endptr - str != len + 1)
+        if (errno != 0 || endptr - str != len)
             return -1;
         return insert_int(arg, int_val);
     case OPTIMAL_FLOAT:
         errno = 0;
         float_val = strtof(str, &endptr);
-        if (errno != 0 || endptr - str != len + 1)
+        if (errno != 0 || endptr - str != len)
             return -1;
         return insert_float(arg, float_val);
     case OPTIMAL_STRING:
-        if (allocate((void **)&str_val, len + 1) < 0)
+        if (allocate((void **)&str_val, len) < 0)
             return -1;
         strncpy(str_val, str, len);
         str_val[len] = '\0';
@@ -277,7 +277,7 @@ static int validate_options(struct optimal_command_builder *command)
     for (int i = 0; i < command->num_args; i++)
     {
         struct optimal_arg *arg = command->args + i;
-        if (arg->qualifier != OPTIMAL_REQUIRED || arg->type != OPTIMAL_FLAG)
+        if (arg->qualifier == OPTIMAL_OPTIONAL && arg->type != OPTIMAL_FLAG)
             continue;
         if (!param_get(&p_builder->param_table,
                        arg->short_name[0], arg->long_name))
@@ -293,27 +293,6 @@ static int validate_options(struct optimal_command_builder *command)
         }
     }
     return 0;
-}
-
-static int print_help(void)
-{
-    printf("%s\n", p_builder->description);
-    struct optimal_command_builder *command;
-    struct optimal_arg *arg;
-    printf("commands:\n");
-    for (int i = 0; i < p_builder->num_commands; i++)
-    {
-        command = p_builder->commands + i;
-        printf("%s: %s\n", command->command_name, command->description);
-        for (int j = 0; j < command->num_args; j++)
-        {
-            arg = command->args + j;
-            printf("  -%s | --%s: %s\n", arg->short_name, arg->long_name,
-                   arg->description);
-        }
-    }
-
-    return -1;
 }
 
 // Does most of the work.
@@ -347,7 +326,7 @@ static int build(int argc, char **argv)
     return command->handler(&p_builder->param_table, restc, restv);
 }
 
-struct optimal_builder *optimal_builder(char *description)
+struct optimal_builder *optimal_builder(char *app_name, char *description)
 {
     static int init = 0;
     if (!init)
@@ -355,6 +334,16 @@ struct optimal_builder *optimal_builder(char *description)
         int_optimal_builder.build = build;
         int_optimal_builder.add_command = add_command;
         int_optimal_builder.num_commands = 0;
+        if (app_name)
+        {
+            strncpy(int_optimal_builder.app_name, app_name,
+                    OPTIMAL_MAX_APP_NAME);
+            int_optimal_builder.app_name[OPTIMAL_MAX_APP_NAME] = '\0';
+        }
+        else
+        {
+            strcpy(int_optimal_builder.app_name, "app");
+        }
         if (description)
         {
             strncpy(int_optimal_builder.description, description,
@@ -496,4 +485,41 @@ void *param_get(struct optimal_param_table *table,
     }
 
     return NULL;
+}
+
+int print_help(void)
+{
+    printf("%s: %s\n", p_builder->app_name, p_builder->description);
+    struct optimal_command_builder *command;
+    struct optimal_arg *arg;
+
+    // print default command
+    printf("usage: %s [<command>] <args>\n", p_builder->app_name);
+    command = find_command("");
+    if (command)
+    {
+        for (int i = 0; i < command->num_args; i++)
+        {
+            arg = command->args + i;
+            printf("  -%s | --%s:\t%s\n", arg->short_name, arg->long_name,
+                   arg->description);
+        }
+    }
+
+    printf("commands:\n");
+    for (int i = 0; i < p_builder->num_commands; i++)
+    {
+        command = p_builder->commands + i;
+        if (strcmp(command->command_name, "") == 0)
+            continue;
+        printf("%s: %s\n", command->command_name, command->description);
+        for (int j = 0; j < command->num_args; j++)
+        {
+            arg = command->args + j;
+            printf("  -%s | --%s:\t%s\n", arg->short_name, arg->long_name,
+                   arg->description);
+        }
+    }
+
+    return -1;
 }
